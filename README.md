@@ -41,12 +41,25 @@ $ python run_forecaster.py
 ## Output
 
 ```
+=== Attack Path Forecast ===
 {
-  "current_chain": ["T1566.001", "T1059.001"],
+  "current_chain": [
+    "T1566.001",
+    "T1059.001"
+  ],
   "top_predictions": [
-    {"technique_id": "T1003.001", "score": 0.49},
-    {"technique_id": "T1105", "score": 0.45},
-    {"technique_id": "T1027", "score": 0.43}
+    {
+      "technique_id": "T1027",
+      "score": 1.0
+    },
+    {
+      "technique_id": "T1105",
+      "score": 0.91
+    },
+    {
+      "technique_id": "T1003.001",
+      "score": 0.82
+    }
   ]
 }
 ```
