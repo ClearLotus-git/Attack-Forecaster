@@ -16,6 +16,13 @@ ingest (alerts/logs) → technique resolver → attack-graph forecaster → reco
 - Simple, dependency-light (just Python built-ins)
 
 ---
+
+### Modes
+- **Default** → Uses `data-transitions.json` for quick local testing.  
+- **Live MITRE** → Add `--live-mitre` to fetch the latest ATT&CK dataset directly from MITRE.  
+
+
+---
 ## How to Run
 
 Clone the repository and install dependencies:
@@ -29,7 +36,12 @@ pip install -r requirements.txt
 ```
 $ python run_forecaster.py
 ```
----
+
+### Live MITRE mode
+
+```
+python3 forecaster.py --live-mitre
+```
 
 
 ## Example
