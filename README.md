@@ -1,53 +1,45 @@
 # Attack Path Forecaster
 
-A lightweight Python tool that forecasts the **next likely adversary techniques** based on MITRE ATT&CK transition mappings.
+A lightweight Python tool that forecasts the **next likely adversary techniques** based on MITRE ATT&CK® transition mappings.
 
-Given observed techniques from alerts/logs, it predicts possible next steps in the attack chain and outputs the top candidates with confidence scores.
+Given observed attacker techniques (from alerts, logs, or manual input), it predicts possible next steps in the attack chain and outputs the top candidate techniques with confidence weights.
 
-```
-ingest (alerts/logs) → technique resolver → attack-graph forecaster → recommendations
-                                             ↑
-                                  ATT&CK transitions + weights
-```
+---
+
 ## Features
 - Ingests observed attacker techniques (`input-evidence.json`)
-- Uses weighted transitions (`data-transitions.json`) to forecast likely next techniques
-- Provides top 3 predictions with normalized scores
-- Simple, dependency-light (just Python built-ins)
+- Uses weighted transitions (`data-transitions.json`) or live MITRE data
+- Forecasts **top 3 likely next ATT&CK techniques**
+- Supports offline (local JSON) and online (`--live-mitre`) modes
+- Dependency-light (just Python + `requests`)
 
 ---
 
-### Modes
-- **Default** → Uses `data-transitions.json` for quick local testing.  
-- **Live MITRE** → Add `--live-mitre` to fetch the latest ATT&CK dataset directly from MITRE.  
-
-
----
-## How to Run
-
-Clone the repository and install dependencies:
-
+## Installation
+Clone the repo:
 ```bash
 git clone https://github.com/ClearLotus-git/Attack-Forecaster.git
 cd Attack-Forecaster
 pip install -r requirements.txt
 ```
-## Run
-```
-$ python run_forecaster.py
-```
+## Usage
 
-### Live MITRE mode
+### Run with local data:
 
 ```
-python3 forecaster.py --live-mitre
+$ python3 run_forecaster.py
 ```
+### Run with live MITRE ATT&CK data:
 
+```
+$ python3 run_forecaster.py --live-mitre
+```
 
 ## Example
 
-### Input (`input-evidence.json`)
-```json
+### Input (input-evidence.json)
+
+```
 {
   "observed": [
     {"technique_id": "T1566.001", "source": "email_gateway"},
@@ -56,38 +48,43 @@ python3 forecaster.py --live-mitre
 }
 ```
 
-## Output
+### Output
 
 ```
-=== Attack Path Forecast ===
 {
-  "current_chain": [
-    "T1566.001",
-    "T1059.001"
-  ],
+  "current_chain": ["T1566.001", "T1059.001"],
   "top_predictions": [
-    {
-      "technique_id": "T1027",
-      "score": 1.0
-    },
-    {
-      "technique_id": "T1105",
-      "score": 0.91
-    },
-    {
-      "technique_id": "T1003.001",
-      "score": 0.82
-    }
+    {"technique_id": "T1027", "weight": 0.8},
+    {"technique_id": "T1105", "weight": 0.7}
   ]
 }
+
 ```
 
 ## License
 
-This project is released under the MIT License.  
-You are free to use, modify, and distribute it with attribution.
-
+Released under the MIT License.
 © 2025 ClearLotus
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
