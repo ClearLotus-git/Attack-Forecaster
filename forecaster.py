@@ -1,95 +1,63 @@
 import json
-from collections import defaultdict
+import argparse
+import requests
+from stix2 import MemoryStore
 
-DECAY = 0.7  # weight decay for two-hop lookahead
+# Default transition file
+DEFAULT_TRANSITIONS_FILE = "data-transitions.json"
 
-def load_transitions(path="data-transitions.json"):
-    """Load technique transition graph from JSON."""
-    with open(path, "r", encoding="utf-8") as f:
-        edges = json.load(f)
-
-    graph = defaultdict(list)
-    for e in edges:
-        graph[e["from"]].append({
-            "to": e["to"],
-            "weight": float(e["weight"]),
-            "note": e.get("note", "")
-        })
-    return graph
+# MITRE CTI ATT&CK dataset (enterprise)
+MITRE_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
 
 
-def one_hop_scores(graph, last_tid):
-    """Direct predictions from last technique."""
-    scores = defaultdict(float)
-    for edge in graph.get(last_tid, []):
-        scores[edge["to"]] = max(scores[edge["to"]], edge["weight"])
-    return scores
+def load_transitions(local=True):
+    if local:
+        with open(DEFAULT_TRANSITIONS_FILE, "r") as f:
+            return json.load(f)
+    else:
+        print("[*] Fetching MITRE ATT&CK dataset...")
+        data = requests.get(MITRE_URL).json()
+        ms = MemoryStore(stix_data=data["objects"])
+
+        # Build transitions dynamically
+        transitions = {}
+        for rel in ms.query(["relationship"]):
+            if rel["relationship_type"] == "uses":
+                src = rel.get("source_ref", "")
+                tgt = rel.get("target_ref", "")
+                transitions.setdefault(src, []).append(tgt)
+
+        return transitions
 
 
-def two_hop_scores(graph, last_tid):
-    """Indirect predictions (neighbors of neighbors)."""
-    scores = defaultdict(float)
-    for edge in graph.get(last_tid, []):
-        mid = edge["to"]
-        for edge2 in graph.get(mid, []):
-            scores[edge2["to"]] = max(
-                scores[edge2["to"]],
-                edge["weight"] * edge2["weight"] * DECAY
-            )
-    return scores
+def forecast(current_chain, transitions, top_n=3):
+    last_step = current_chain[-1]
+    candidates = transitions.get(last_step, [])
 
+    results = []
+    for c in candidates:
+        results.append({"technique_id": c, "score": 1.0})  # Placeholder score
 
-def normalize(scores):
-    """Scale scores 0–1 relative to max."""
-    if not scores:
-        return {}
-    maxv = max(scores.values())
-    if maxv == 0:
-        return dict(scores)
-    return {k: round(v / maxv, 2) for k, v in scores.items()}
-
-
-def forecast(evidence_path="input-evidence.json",
-             transitions_path="data-transitions.json"):
-    """Main forecasting function."""
-    # Load evidence
-    with open(evidence_path, "r", encoding="utf-8") as f:
-        evidence = json.load(f)
-
-    chain = [e["technique_id"] for e in evidence.get("observed", [])]
-    last = chain[-1] if chain else None
-    if not last:
-        return {"error": "No observed techniques provided."}
-
-    # Load transitions graph
-    graph = load_transitions(transitions_path)
-
-    # One-hop + two-hop scores
-    s1 = one_hop_scores(graph, last)
-    s2 = two_hop_scores(graph, last)
-
-    combined = defaultdict(float)
-    for k, v in s1.items():
-        combined[k] = max(combined[k], v)
-    for k, v in s2.items():
-        combined[k] = max(combined[k], v)
-
-    # Drop already-seen techniques
-    for tid in chain:
-        combined.pop(tid, None)
-
-    # Normalize + rank
-    combined = normalize(combined)
-    top = sorted(combined.items(), key=lambda x: x[1], reverse=True)[:3]
-
-    return {
-        "current_chain": chain,
-        "top_predictions": [
-            {"technique_id": k, "score": v} for k, v in top
-        ]
-    }
+    return results[:top_n]
 
 
 if __name__ == "__main__":
-    result = forecast()
-    print(json.dumps(result, indent=2))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--live-mitre", action="store_true", help="Use live MITRE ATT&CK dataset")
+    args = parser.parse_args()
+
+    transitions = load_transitions(local=not args.live_mitre)
+
+    # Load example evidence
+    with open("input-evidence.json") as f:
+        evidence = json.load(f)
+
+    chain = [obs["technique_id"] for obs in evidence["observed"]]
+
+    predictions = forecast(chain, transitions)
+
+    print("=== Attack Path Forecast ===")
+    print(json.dumps({
+        "current_chain": chain,
+        "top_predictions": predictions
+    }, indent=2))
