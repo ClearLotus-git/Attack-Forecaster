@@ -1,0 +1,13 @@
+[
+  {"from": "T1566.001", "to": "T1204", "weight": 0.7, "note": "Macro execution after phishing attachment"},
+  {"from": "T1204", "to": "T1059.001", "weight": 0.65, "note": "Macro spawns PowerShell"},
+  {"from": "T1059.001", "to": "T1027", "weight": 0.55, "note": "Obfuscation follows PS execution"},
+  {"from": "T1059.001", "to": "T1105", "weight": 0.5, "note": "Ingress tool transfer / staging"},
+  {"from": "T1105", "to": "T1071", "weight": 0.6, "note": "C2 via app-layer protocol"},
+  {"from": "T1059.001", "to": "T1003.001", "weight": 0.45, "note": "Credential access after code exec"},
+  {"from": "T1003.001", "to": "T1021.001", "weight": 0.55, "note": "Lateral via RDP post-creds"},
+  {"from": "T1021.001", "to": "T1547", "weight": 0.5, "note": "Persistence after lateral movement"},
+  {"from": "T1021.001", "to": "T1041", "weight": 0.35, "note": "Exfil over C2 channel"},
+  {"from": "T1053.005", "to": "T1041", "weight": 0.3, "note": "Scheduled exfiltration"},
+  {"from": "T1566.002", "to": "T1204", "weight": 0.55, "note": "Link phishing → user exec"}
+]
