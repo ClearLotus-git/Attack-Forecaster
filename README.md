@@ -9,9 +9,6 @@ ingest (alerts/logs) → technique resolver → attack-graph forecaster → reco
                                              ↑
                                   ATT&CK transitions + weights
 ```
-
----
-
 ## Features
 - Ingests observed attacker techniques (`input-evidence.json`)
 - Uses weighted transitions (`data-transitions.json`) to forecast likely next techniques
@@ -19,6 +16,15 @@ ingest (alerts/logs) → technique resolver → attack-graph forecaster → reco
 - Simple, dependency-light (just Python built-ins)
 
 ---
+## How to Run
+
+Clone the repository and install dependencies:
+
+```bash
+git clone https://github.com/ClearLotus-git/Attack-Forecaster.git
+cd Attack-Forecaster
+pip install -r requirements.txt
+```
 ## Run
 ```
 $ python run_forecaster.py
