@@ -66,31 +66,6 @@ $ python3 run_forecaster.py --live-mitre
 Released under the MIT License.
 © 2025 ClearLotus
 
+---
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+<sub>⚠️ Note: Live MITRE integration is still experimental. Current predictions are based on local transition data. Future updates may expand live data support.</sub>
