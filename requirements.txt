@@ -1,3 +1,4 @@
 networkx   # if you want to expand graph logic
 stix2
 requests
+jsonschema

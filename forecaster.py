@@ -1,63 +1,52 @@
 import json
-import argparse
 import requests
-from stix2 import MemoryStore
 
-# Default transition file
-DEFAULT_TRANSITIONS_FILE = "data-transitions.json"
+def load_evidence(path="input-evidence.json"):
+    """Load observed attacker techniques + context from JSON file."""
+    with open(path, "r") as f:
+        return json.load(f)
 
-# MITRE CTI ATT&CK dataset (enterprise)
-MITRE_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
-
-
-def load_transitions(local=True):
-    if local:
-        with open(DEFAULT_TRANSITIONS_FILE, "r") as f:
-            return json.load(f)
-    else:
-        print("[*] Fetching MITRE ATT&CK dataset...")
-        data = requests.get(MITRE_URL).json()
-        ms = MemoryStore(stix_data=data["objects"])
-
-        # Build transitions dynamically
+def load_transitions(path="data-transitions.json", live=False):
+    """
+    Load ATT&CK technique transitions.
+    - Local: from JSON file in repo
+    - Live: from MITRE CTI GitHub (attack-pattern.json)
+    """
+    if live:
+        url = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/attack-pattern/attack-pattern.json"
+        print(f"[INFO] Fetching MITRE ATT&CK data from {url}")
+        resp = requests.get(url)
+        resp.raise_for_status()
+        data = resp.json()
         transitions = {}
-        for rel in ms.query(["relationship"]):
-            if rel["relationship_type"] == "uses":
-                src = rel.get("source_ref", "")
-                tgt = rel.get("target_ref", "")
-                transitions.setdefault(src, []).append(tgt)
 
+        # Build a simple mapping: technique_id -> related technique_ids
+        for obj in data.get("objects", []):
+            if obj.get("type") == "attack-pattern":
+                tid = obj.get("external_references", [{}])[0].get("external_id")
+                if tid:
+                    # For demo, we’ll just map to same ID to avoid empty dict
+                    transitions[tid] = [tid]
         return transitions
+    else:
+        with open(path, "r") as f:
+            return json.load(f)
 
+def forecast(current_chain, transitions, top_k=3):
+    """
+    Predict next likely techniques based on current chain + transitions.
+    """
+    if not current_chain:
+        return []
 
-def forecast(current_chain, transitions, top_n=3):
     last_step = current_chain[-1]
     candidates = transitions.get(last_step, [])
 
+    # Weighting: simple decreasing scores
     results = []
-    for c in candidates:
-        results.append({"technique_id": c, "score": 1.0})  # Placeholder score
-
-    return results[:top_n]
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--live-mitre", action="store_true", help="Use live MITRE ATT&CK dataset")
-    args = parser.parse_args()
-
-    transitions = load_transitions(local=not args.live_mitre)
-
-    # Load example evidence
-    with open("input-evidence.json") as f:
-        evidence = json.load(f)
-
-    chain = [obs["technique_id"] for obs in evidence["observed"]]
-
-    predictions = forecast(chain, transitions)
-
-    print("=== Attack Path Forecast ===")
-    print(json.dumps({
-        "current_chain": chain,
-        "top_predictions": predictions
-    }, indent=2))
+    for i, c in enumerate(candidates[:top_k]):
+        results.append({
+            "technique_id": c,
+            "weight": round(1.0 - (i * 0.1), 2)
+        })
+    return results
