@@ -1,40 +1,47 @@
 import json
 import requests
 
+MITRE_ENTERPRISE_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
+
 def load_evidence(path="input-evidence.json"):
-    """Load observed attacker techniques + context from JSON file."""
+    """Load observed attacker evidence from JSON file."""
     with open(path, "r") as f:
         return json.load(f)
 
+
 def load_transitions(path="data-transitions.json", live=False):
     """
-    Load ATT&CK technique transitions.
-    - Local: from JSON file in repo
-    - Live: from MITRE CTI GitHub (attack-pattern.json)
+    Load ATT&CK transitions.
+    - If live=True, fetch MITRE's enterprise-attack.json bundle.
+    - Otherwise, load from local JSON file.
     """
     if live:
-        url = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/attack-pattern/attack-pattern.json"
-        print(f"[INFO] Fetching MITRE ATT&CK data from {url}")
-        resp = requests.get(url)
+        print(f"[INFO] Fetching MITRE ATT&CK enterprise dataset...")
+        resp = requests.get(MITRE_ENTERPRISE_URL)
         resp.raise_for_status()
-        data = resp.json()
+        data = resp.json()["objects"]
+
         transitions = {}
 
-        # Build a simple mapping: technique_id -> related technique_ids
-        for obj in data.get("objects", []):
-            if obj.get("type") == "attack-pattern":
-                tid = obj.get("external_references", [{}])[0].get("external_id")
-                if tid:
-                    # For demo, we’ll just map to same ID to avoid empty dict
-                    transitions[tid] = [tid]
+        # Build transitions using "relationship" objects
+        for obj in data:
+            if obj.get("type") == "relationship" and obj.get("relationship_type") == "uses":
+                src = obj.get("source_ref", "")
+                tgt = obj.get("target_ref", "")
+
+                # Only keep technique-to-technique links
+                if src.startswith("attack-pattern--") and tgt.startswith("attack-pattern--"):
+                    transitions.setdefault(src, []).append(tgt)
+
         return transitions
     else:
         with open(path, "r") as f:
             return json.load(f)
 
+
 def forecast(current_chain, transitions, top_k=3):
     """
-    Predict next likely techniques based on current chain + transitions.
+    Given the current chain of techniques, suggest next likely techniques.
     """
     if not current_chain:
         return []
@@ -42,7 +49,6 @@ def forecast(current_chain, transitions, top_k=3):
     last_step = current_chain[-1]
     candidates = transitions.get(last_step, [])
 
-    # Weighting: simple decreasing scores
     results = []
     for i, c in enumerate(candidates[:top_k]):
         results.append({
