@@ -21,7 +21,7 @@ ingest (alerts/logs) → technique resolver → attack-graph forecaster → reco
 ---
 ## Run
 ```
-$ python run_forecast.py
+$ python run_forecaster.py
 ```
 ---
 
